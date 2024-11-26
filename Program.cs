@@ -8,7 +8,8 @@ namespace MyLisp
     class Program
     {
         public static void Main() {
-            string text = File.ReadAllText("./Program.txt");
+            //string text = File.ReadAllText("./Program.txt");
+            string text = File.ReadAllText("./block_test.txt");
             Console.WriteLine(text);
             Parser.tokens = Lexer.Tokenize(text);
             Console.WriteLine("result:\n");
@@ -16,7 +17,6 @@ namespace MyLisp
             foreach (Expr ex in program) {
                 Evaluator.EvalExpr(ex);
             }
-
         }
     }
 }

@@ -12,6 +12,8 @@ namespace MyLisp
         Identifier,
         OParen,
         CParen,
+        COParen,
+        CCParen,
         Coma,
         Number,
     };
@@ -49,6 +51,14 @@ namespace MyLisp
                 }
                 else if (text[text_pointer] == ')') {
                     result.Add(new Token(TokenType.CParen));
+                    text_pointer++;
+                }
+                else if (text[text_pointer] == '{') {
+                    result.Add(new Token(TokenType.COParen));
+                    text_pointer++;
+                }
+                else if (text[text_pointer] == '}') {
+                    result.Add(new Token(TokenType.CCParen));
                     text_pointer++;
                 }
                 else if (text[text_pointer] == ',') {

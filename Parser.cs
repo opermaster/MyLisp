@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,10 +10,9 @@ namespace MyLisp
     public enum ExprType
     {
         FunctionCall,
-        Add,
-        Sub,
-        Mul,
+        Variable,
         Number,
+        Block,
     }
     public class Expr
     {
@@ -20,6 +20,7 @@ namespace MyLisp
 
         public ExprType type;
         public string function_name;
+        public string variable_name;
         public int value;
         public List<Expr> expressions = new();
 
@@ -39,6 +40,11 @@ namespace MyLisp
             type = _type;
             function_name = _function_name;
         }
+        public Expr(ExprType _type, string _variable_name, int _value) {
+            type = _type;
+            variable_name = _variable_name;
+            value = _value;
+        }
         public Expr(ExprType _type, string _function_name, params Expr[] _expressions) {
             type = _type;
             function_name = _function_name;
@@ -49,28 +55,58 @@ namespace MyLisp
     {
         static public Token[] tokens;
         static public int tp = 0;
+        static private string[] key_words = [
+            "add",
+            "print",
+            "sub",
+            "cmp",
+            "div",
+            "mul",
+            "var",
+            "if",
+            "assign",
+            "loop",
+        ];
         static public bool ExpectKind(TokenType expexted) {
             if (tokens[++tp].type == expexted) return true;
             else return false;
 
+        }
+        static public Expr ParseVariable() {
+            return new Expr(ExprType.Variable, tokens[tp].str_value,0);
         }
         static public Expr ParseNumber() {
             return new Expr(ExprType.Number, tokens[tp].int_val);
         }
         static private void ParseArgs(Expr expression) {
             switch (tokens[tp].type) {
+                case TokenType.COParen:
+                    tp++;
+                    expression.expressions.Add(new Expr(ExprType.Block, ParseTokenArr().ToArray()));
+                    break;
                 case TokenType.Number:
                     expression.expressions.Add(ParseNumber());
                     break;
                 case TokenType.Identifier:
-                    expression.expressions.Add(ParseExpression());
-                    break;
+                    if (key_words.Contains(tokens[tp].str_value)) {
+                        expression.expressions.Add(ParseExpression());
+                        break;
+                    } else {
+                        expression.expressions.Add(ParseVariable());
+                        break;
+                    }
             }
         }
         static public Expr[] ParseTokenArr() {
             List<Expr> exps = new List<Expr>();
             while (tp < tokens.Length) {
                 switch (tokens[tp].type) {
+                    case TokenType.COParen:
+                        List<Expr> block = new List<Expr>();
+                        tp++;
+                        block.AddRange(ParseTokenArr());
+                        exps.Add(new Expr(ExprType.Block,block.ToArray()));
+                        break;
                     case TokenType.Identifier:
                         exps.Add(ParseExpression());
                         break;
@@ -103,6 +139,20 @@ namespace MyLisp
                         ParseArgs(expr);
                     }
                     else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.OParen}");
+                    if (ExpectKind(TokenType.CParen)) break;
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.CParen}");
+                case "assign":
+                    expr = new Expr(ExprType.FunctionCall, "assign");
+                    if (ExpectKind(TokenType.OParen)) {
+                        tp++;
+                        ParseArgs(expr);
+                    }
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.OParen}");
+                    if (ExpectKind(TokenType.Coma)) {
+                        tp++;
+                        ParseArgs(expr);
+                    }
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.Coma}");
                     if (ExpectKind(TokenType.CParen)) break;
                     else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.CParen}");
                 case "sub":
@@ -161,6 +211,29 @@ namespace MyLisp
                     else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.Coma}");
                     if (ExpectKind(TokenType.CParen)) break;
                     else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.CParen}");
+                case "loop":
+                    expr = new Expr(ExprType.FunctionCall, "loop");
+                    if (ExpectKind(TokenType.OParen)) {
+                        tp++;
+                        ParseArgs(expr);
+                    }
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.OParen}");
+                    if (ExpectKind(TokenType.Coma)) {
+                        tp++;
+                        ParseArgs(expr);
+                    }
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.Coma}");
+                    if (ExpectKind(TokenType.CParen)) break;
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.CParen}");
+                case "var":
+                    expr = new Expr(ExprType.FunctionCall, "var");
+                    if (ExpectKind(TokenType.OParen)) {
+                        tp++;
+                        ParseArgs(expr);
+                    }
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.OParen}");
+                    if (ExpectKind(TokenType.CParen)) break;
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.CParen}");
                 case "if":
                     expr = new Expr(ExprType.FunctionCall, "if");
                     if (ExpectKind(TokenType.OParen)) {
@@ -181,7 +254,7 @@ namespace MyLisp
                     if (ExpectKind(TokenType.CParen)) break;
                     else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.CParen}");
                 default:
-                    throw new Exception($"Unknown identifier: {tokens[tp].str_value}");
+                    throw new Exception($"Unknown identifier: \'{tokens[tp].str_value}\'");
 
             }
             return expr;
