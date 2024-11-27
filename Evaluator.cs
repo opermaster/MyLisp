@@ -13,8 +13,7 @@ namespace MyLisp
             int left, right;
             int body;
             int condition;
-            int var_val;
-            int var_new_val;
+            int res=0;
             switch (program.function_name) {
                 case "add":
                     left = EvalExpr(program.expressions[0]);
@@ -36,10 +35,24 @@ namespace MyLisp
                     left = EvalExpr(program.expressions[0]);
                     right = EvalExpr(program.expressions[1]);
                     return left == right ? 1 : 0;
+                case "ls":
+                    left = EvalExpr(program.expressions[0]);
+                    right = EvalExpr(program.expressions[1]);
+                    return left <= right ? 1 : 0;
+                case "gr":
+                    left = EvalExpr(program.expressions[0]);
+                    right = EvalExpr(program.expressions[1]);
+                    return left >= right ? 1 : 0;
                 case "if":
                     condition = EvalExpr(program.expressions[0]);
                     if (condition == 1) return EvalExpr(program.expressions[1]);
                     else return EvalExpr(program.expressions[2]);
+                case "mod":
+                    left = EvalExpr(program.expressions[0]);
+                    right= EvalExpr(program.expressions[1]);
+                    return left % right;
+                case "pass":
+                    return 0;
                 case "var":
                     variables[program.expressions[0].variable_name] = 0;
                     body = EvalExpr(program.expressions[0]);
@@ -49,7 +62,11 @@ namespace MyLisp
                     return EvalExpr(program.expressions[0]);
                 case "loop":
                     condition = EvalExpr(program.expressions[0]);
-                    return EvalExpr(program.expressions[0]);
+                    while (condition == 1) {
+                        res +=EvalExpr(program.expressions[1]);
+                        condition = EvalExpr(program.expressions[0]);
+                    }
+                    return res;
                 case "print":
                     Console.WriteLine(EvalExpr(program.expressions[0]));
                     return 0;
