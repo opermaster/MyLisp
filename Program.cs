@@ -20,19 +20,6 @@ namespace MyLisp
             output_program.AppendLine("target datalayout =\"e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128\"");
             output_program.AppendLine("target triple = \"x86_64-pc-windows-msvc19.38.33134\"");
             output_program.AppendLine("");
-            output_program.AppendLine("$sprintf = comdat any");
-            output_program.AppendLine("");
-            output_program.AppendLine("$vsprintf = comdat any");
-            output_program.AppendLine("");
-            output_program.AppendLine("$_snprintf = comdat any");
-            output_program.AppendLine("");
-            output_program.AppendLine("$_vsnprintf = comdat any");
-            output_program.AppendLine("");
-            output_program.AppendLine("$_vsprintf_l = comdat any");
-            output_program.AppendLine("");
-            output_program.AppendLine("$_vsnprintf_l = comdat any");
-            output_program.AppendLine("");
-            output_program.AppendLine("$__local_stdio_printf_options = comdat any");
             output_program.AppendLine("");
             output_program.AppendLine("@__local_stdio_printf_options._OptionsStorage = internal global i64 0, align 8");
             output_program.AppendLine("declare dso_local i32 @putchar(i32 noundef) #1");
@@ -149,7 +136,8 @@ static public void CompileFuncCall(Expr program) {
             int condition;
             int leftResult;
             int rightResult;
-            int res = 0;
+            int true_false = 0;
+            int loop_body_cond = 0;
             switch (program.function_name) {
                 case "add":
                     CompileExpr(program.expressions[0]);
@@ -223,47 +211,91 @@ static public void CompileFuncCall(Expr program) {
                     output_program.AppendLine($"    %a{instruction_p++} = load i32, ptr %a{rightResult}, align 4");
                     output_program.AppendLine($"    %a{instruction_p++} = icmp eq i32 %a{instruction_p - 3}, %a{instruction_p - 2}");
 
-                    output_program.AppendLine($"    %a{instruction_p++} = alloca i32, align 4");
-                    output_program.AppendLine($"    store i32 %a{instruction_p - 2}, ptr %a{instruction_p - 1}, align 4");
+                    //output_program.AppendLine($"    %a{instruction_p++} = alloca i32, align 4");
+                    //output_program.AppendLine($"    store i32 %a{instruction_p - 2}, ptr %a{instruction_p - 1}, align 4");
                     break;
-                //case "ls":
-                //    left = CompileExpr(program.expressions[0]);
-                //    right = CompileExpr(program.expressions[1]);
-                //    return left <= right ? 1 : 0;
-                //case "gr":
-                //    left = CompileExpr(program.expressions[0]);
-                //    right = CompileExpr(program.expressions[1]);
-                //    return left >= right ? 1 : 0;
-                //case "if":
-                //    condition = CompileExpr(program.expressions[0]);
-                //    if (condition == 1) return CompileExpr(program.expressions[1]);
-                //    else return CompileExpr(program.expressions[2]);
+                case "ls":
+                    CompileExpr(program.expressions[0]);
+                    leftResult = instruction_p - 1;
+
+                    CompileExpr(program.expressions[1]);
+                    rightResult = instruction_p - 1;
+
+                    output_program.AppendLine($"\n;  ---- LS <= ----");
+                    output_program.AppendLine($"    %a{instruction_p++} = load i32, ptr %a{leftResult}, align 4");
+                    output_program.AppendLine($"    %a{instruction_p++} = load i32, ptr %a{rightResult}, align 4");
+                    output_program.AppendLine($"    %a{instruction_p++} = icmp ule i32 %a{instruction_p - 3}, %a{instruction_p - 2}");
+                    break;
+                case "gr":
+                    CompileExpr(program.expressions[0]);
+                    leftResult = instruction_p - 1;
+
+                    CompileExpr(program.expressions[1]);
+                    rightResult = instruction_p - 1;
+
+                    output_program.AppendLine($"\n;  ---- GR >= ----");
+                    output_program.AppendLine($"    %a{instruction_p++} = load i32, ptr %a{leftResult}, align 4");
+                    output_program.AppendLine($"    %a{instruction_p++} = load i32, ptr %a{rightResult}, align 4");
+                    output_program.AppendLine($"    %a{instruction_p++} = icmp uge i32 %a{instruction_p - 3}, %a{instruction_p - 2}");
+                    break;
+                case "if":
+                    output_program.AppendLine($"\n;  ---- IF ----");
+                    CompileExpr(program.expressions[0]);
+                    output_program.AppendLine($"    br i1 %a{instruction_p - 1}, label %atrue{instruction_p + 1} , label %afalse{instruction_p + 1}");
+
+                    true_false = instruction_p + 1;
+
+                    output_program.AppendLine($"atrue{true_false}:");
+                    CompileExpr(program.expressions[1]);
+                    output_program.AppendLine($"   br label %aend{true_false}");
+
+                    output_program.AppendLine($"afalse{true_false}:");
+                    CompileExpr(program.expressions[2]);
+                    output_program.AppendLine($"   br label %aend{true_false}");
+
+                    output_program.AppendLine($"aend{true_false}:");
+                    break;
                 //case "mod":
                 //    left = CompileExpr(program.expressions[0]);
                 //    right = CompileExpr(program.expressions[1]);
                 //    return left % right;
                 //case "pass":
                 //    return 0;
-                //case "var":
-                //    variables[program.expressions[0].variable_name] = 0;
-                //    body = CompileExpr(program.expressions[0]);
-                //    return body;
-                //case "assign":
-                //    variables[program.expressions[0].variable_name] = CompileExpr(program.expressions[1]);
-                //    return CompileExpr(program.expressions[0]);
-                //case "loop":
+                case "var":
+                    output_program.Insert(206,$"\n;  ---- VAR DECLARE ----\n");
+                    output_program.Insert(234,$"@{program.expressions[0].variable_name} = dso_local global i32 0, align 4\n");
+                    break;
+                case "assign":
+                    CompileExpr(program.expressions[1]);
+                    output_program.AppendLine($"\n;  ---- VAR ASSIGN ----");
+                    output_program.AppendLine($"    %a{instruction_p++} = load i32, ptr %a{instruction_p-2}, align 4");
+                    output_program.AppendLine($"    store i32 %a{instruction_p - 1}, ptr @{program.expressions[0].variable_name}, align 4");
+                    break;
+                case "loop":
+                    output_program.AppendLine($"\n;  ---- LOOP ----");
+                    output_program.AppendLine($"    br label %loopcond{instruction_p++}");
+                    loop_body_cond = instruction_p-1;
+                    output_program.AppendLine($"loopcond{loop_body_cond}:");
+
+                    CompileExpr(program.expressions[0]);
+                    output_program.AppendLine($"    br i1 %a{instruction_p - 1}, label %loopbody{loop_body_cond}, label %loopend{loop_body_cond}");
+
+                    output_program.AppendLine($"loopbody{loop_body_cond}:");
+                    CompileExpr(program.expressions[1]);
+                    
+                    output_program.AppendLine($"    br label %loopcond{loop_body_cond}, !llvm.loop !9");
+                    output_program.AppendLine($"loopend{loop_body_cond}:");
+                    break;
+                //condition = CompileExpr(program.expressions[0]);
+                //while (condition == 1) {
+                //    CompileExpr(program.expressions[1]);
                 //    condition = CompileExpr(program.expressions[0]);
-                //    while (condition == 1) {
-                //        res += CompileExpr(program.expressions[1]);
-                //        condition = CompileExpr(program.expressions[0]);
-                //    }
-                //    return res;
+                //}
                 case "print":
                     CompileExpr(program.expressions[0]);
                     int printResult = instruction_p - 1;
                     output_program.AppendLine($"\n;  ---- PRINT ----");
                     output_program.AppendLine($"    %a{instruction_p++} = load i32, ptr %a{printResult}, align 4");
-                    //output_program.AppendLine($"    call i32 @putchar(i32 noundef %a{instruction_p - 1})");
                     output_program.AppendLine($"    call void @Print(i32 noundef %a{instruction_p - 1})");
                     break;
             };
@@ -271,7 +303,6 @@ static public void CompileFuncCall(Expr program) {
         static public void CompileExpr(Expr program) {
             switch (program.type) {
                 case ExprType.Block:
-                    int res = 0;
                     foreach (Expr block_expr in program.expressions)
                         CompileExpr(block_expr);
                     break;
@@ -283,14 +314,12 @@ static public void CompileFuncCall(Expr program) {
                     output_program.AppendLine($"    %a{instruction_p} = alloca i32, align 4");
                     output_program.AppendLine($"    store i32 {program.value},ptr %a{instruction_p}, align 4");
                     instruction_p++;
-                    //program.value;
                     break;
                 case ExprType.Variable:
-                    int out_value_var;
-                    if (variables.TryGetValue(program.variable_name, out out_value_var)) {
-                        //return out_value_var;
-                    }
-                    else throw new Exception($"Using of not identified variable: \'{program.variable_name}\'");
+                    output_program.AppendLine($"\n;  ---- VARIABLE USAGE ----");
+                    output_program.AppendLine($"    %a{instruction_p++} = alloca i32, align 4");
+                    output_program.AppendLine($"    %a{instruction_p}{program.variable_name}_value = load i32, ptr @{program.variable_name}");
+                    output_program.AppendLine($"    store i32 %a{instruction_p}{program.variable_name}_value, ptr %a{instruction_p-1}, align 4");
                     break;
             };
         }
@@ -323,6 +352,7 @@ static public void CompileFuncCall(Expr program) {
             Compiler.output_program.AppendLine("!6 = !{ !\"llvm.loop.mustprogress\"}");
             Compiler.output_program.AppendLine("!7 = distinct!{ !7, !6}");
             Compiler.output_program.AppendLine("!8 = distinct!{ !8, !6}");
+            Compiler.output_program.AppendLine("!9 = distinct!{ !9, !6}");
             Console.WriteLine(Compiler.output_program.ToString());
             File.WriteAllText(".\\llvm_output.ll", Compiler.output_program.ToString());
         }

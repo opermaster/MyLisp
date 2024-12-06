@@ -54,8 +54,8 @@ namespace MyLisp
                 case "pass":
                     return 0;
                 case "var":
-                    variables[program.expressions[0].variable_name] = 0;
-                    body = EvalExpr(program.expressions[0]);
+                    body = EvalExpr(program.expressions[1]);
+                    variables[program.expressions[0].variable_name] = body;
                     return body;
                 case "assign":
                     variables[program.expressions[0].variable_name]= EvalExpr(program.expressions[1]);
