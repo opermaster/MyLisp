@@ -54,12 +54,15 @@ namespace MyLisp
                 case "pass":
                     return 0;
                 case "var":
-                    body = EvalExpr(program.expressions[1]);
-                    variables[program.expressions[0].variable_name] = body;
-                    return body;
+                    variables.Add(program.expressions[0].variable_name, 0);
+                    return 0;
                 case "assign":
-                    variables[program.expressions[0].variable_name]= EvalExpr(program.expressions[1]);
-                    return EvalExpr(program.expressions[0]);
+                    int out_value_var;
+                    if (variables.TryGetValue(program.expressions[0].variable_name, out out_value_var)) {
+                        variables[program.expressions[0].variable_name] = EvalExpr(program.expressions[1]);
+                        return out_value_var;
+                    }
+                    else throw new Exception($"Using of not identified variable: \'{program.variable_name}\'");
                 case "loop":
                     condition = EvalExpr(program.expressions[0]);
                     while (condition == 1) {

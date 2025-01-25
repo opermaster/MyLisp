@@ -15,7 +15,7 @@
  12. gr(a,b) -> a > b
  13. mod(a,b) -> a % b
  14. pass() -> is similar for pass from python
-## Commans that are supported by LLVM compilation
+## Valid functions in LLVM compilation
  1. add(a,b) -> a + b 
  2. print(a) -> prints a
  3. sub(a,b) -> a - b
@@ -26,7 +26,6 @@
 clang llvm_output.ll
 ```
 ## Examples of programs
-### Avalivle with llvm
 ```lua
 print(add(15,add(15,15)))
 print(add(16,add(15,15)))
@@ -34,7 +33,6 @@ print(add(16,add(15,add(10,5))))
 print(sub(50,5))
 print(mul(5,17))
 ```
-### Avaliable by simulation
 ```lua
 var(a)
 assign(a,34)

@@ -125,12 +125,12 @@ namespace MyLisp
             output_program.AppendLine("39:                                               ; preds = %25");
             output_program.AppendLine("  %40 = call i32 @putchar(i32 noundef 10)");
             output_program.AppendLine("  ret void");
-            output_program.AppendLine("    }");
+            output_program.AppendLine("}");
             output_program.AppendLine("");
-            output_program.AppendLine("define i32 @main()  {");
+            //output_program.AppendLine("define i32 @main()  {");
             
         }
-static public void CompileFuncCall(Expr program) {
+        static public void CompileFuncCall(Expr program) {
             int left, right;
             int body;
             int condition;
@@ -298,6 +298,16 @@ static public void CompileFuncCall(Expr program) {
                     output_program.AppendLine($"    %a{instruction_p++} = load i32, ptr %a{printResult}, align 4");
                     output_program.AppendLine($"    call void @Print(i32 noundef %a{instruction_p - 1})");
                     break;
+                case "proc":
+                    output_program.AppendLine(";  ---- PROC ----");
+                    output_program.AppendLine("define i32 @"+program._function_name+"(" + ") {");
+                    foreach(var item in program.expressions) {
+                        CompileExpr(item);
+                    }
+                    output_program.AppendLine("    ret i32 0");
+                    output_program.AppendLine("}");
+
+					break;
             };
         }
         static public void CompileExpr(Expr program) {
@@ -327,19 +337,19 @@ static public void CompileFuncCall(Expr program) {
     class Program
     {
         public static void Main() {
-            //string text = File.ReadAllText("./Program.txt");
-            //string text = File.ReadAllText("./block_test.txt");
-            //string text = File.ReadAllText("./loop_test.txt");
-            string text = File.ReadAllText("./llvm_test.txt");
+            //string text = File.ReadAllText("./Examples/Program.txt");
+            //string text = File.ReadAllText("./Examples/block_test.txt");
+            //string text = File.ReadAllText("./Examples/loop_test.txt");
+            //string text = File.ReadAllText("./Examples/llvm_test.txt");
+            string text = File.ReadAllText("./Examples/proc_test.txt");
             Console.WriteLine(text);
             Parser.tokens = Lexer.Tokenize(text);
-            //Console.WriteLine("result:\n");
             Expr[] program = Parser.ParseTokenArr();
             foreach (Expr ex in program) {
                 Compiler.CompileExpr(ex);
             }
-            Compiler.output_program.AppendLine("ret i32 0");
-            Compiler.output_program.AppendLine("}");
+            //Compiler.output_program.AppendLine("ret i32 0");
+            //Compiler.output_program.AppendLine("}");
             Compiler.output_program.AppendLine("!llvm.module.flags = !{ !0, !1, !2, !3}");
             Compiler.output_program.AppendLine("!llvm.ident = !{ !4}");
             Compiler.output_program.AppendLine("");
@@ -354,7 +364,7 @@ static public void CompileFuncCall(Expr program) {
             Compiler.output_program.AppendLine("!8 = distinct!{ !8, !6}");
             Compiler.output_program.AppendLine("!9 = distinct!{ !9, !6}");
             Console.WriteLine(Compiler.output_program.ToString());
-            File.WriteAllText(".\\llvm_output.ll", Compiler.output_program.ToString());
+            File.WriteAllText(".\\Output\\llvm_output.ll", Compiler.output_program.ToString());
         }
     }
 }

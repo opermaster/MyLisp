@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics.Contracts;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,9 +22,12 @@ namespace MyLisp
 
         public ExprType type;
         public string function_name;
+        public string _function_name;
         public string variable_name;
         public int value;
+        public int args_count;
         public List<Expr> expressions = new();
+        public List<Expr> _variables = new();
 
         public Expr() { }
         public Expr(ExprType _type, params Expr[] _expressions) {
@@ -55,22 +60,24 @@ namespace MyLisp
     {
         static public Token[] tokens;
         static public int tp = 0;
-        static private string[] key_words = [
-            "add",
-            "print",
-            "sub",
-            "cmp",
-            "div",
-            "mul",
-            "var",
-            "if",
-            "assign",
-            "loop",
-            "ls",
-            "gr",
-            "mod",
-            "pass",
+        static private List<(string, int)> key_words = [
+            ("add",0),
+            ("print",0),
+            ("sub",0),
+            ("cmp",0),
+            ("div",0),
+            ("mul",0),
+            ("var",0),
+            ("if",0),
+            ("assign",0),
+            ("loop",0),
+            ("ls",0),
+            ("gr",0),
+            ("mod",0),
+            ("pass",0),
+            ("proc",0),
         ];
+        
         static public bool ExpectKind(TokenType expexted) {
             if (tokens[++tp].type == expexted) return true;
             else return false;
@@ -159,7 +166,6 @@ namespace MyLisp
                     else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.OParen}");
                     if (ExpectKind(TokenType.CParen)) break;
                     else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.CParen}");
-                    break;
                 case "assign":
                     expr = new Expr(ExprType.FunctionCall, "assign");
                     if (ExpectKind(TokenType.OParen)) {
@@ -314,8 +320,33 @@ namespace MyLisp
                     else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.Coma}");
                     if (ExpectKind(TokenType.CParen)) break;
                     else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.CParen}");
+                case "proc":
+                    expr = new Expr(ExprType.FunctionCall, "proc");
+                    if (ExpectKind(TokenType.OParen)) { 
+                        if (ExpectKind(TokenType.Identifier)) {
+                            expr._function_name= tokens[tp].str_value;
+                            tp++;
+                            if (ExpectKind(TokenType.Number)) {
+                                expr.args_count = tokens[tp].int_val;
+                                key_words.Add((expr._function_name,expr.args_count));
+                                for(int i = 0; i <= expr.args_count; i++) {
+                                    if (ExpectKind(TokenType.Coma)) {
+                                        tp++;
+                                        ParseArgs(expr);
+                                    }
+                                    else throw new Exception($"Unexpexted token: {tokens[tp].type}, expected {TokenType.Coma}");
+                                }
+                            }
+                            else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.Number}");
+                        }
+                        else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.Identifier}");
+                    }
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.OParen}");
+                    if (ExpectKind(TokenType.CParen)) break;
+                    else throw new Exception($"Unexpexted token: {tokens[tp - 1].type}, expected {TokenType.CParen}");
                 default:
-                    throw new Exception($"Unknown identifier: \'{tokens[tp].str_value}\'");
+                    if (!key_words.Contains((tokens[tp].str_value,0))) throw new Exception($"Unknown identifier: \'{tokens[tp].str_value}\'");
+                    else break;
 
             }
             return expr;
