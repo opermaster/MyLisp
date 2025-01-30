@@ -286,11 +286,6 @@ namespace MyLisp
                     output_program.AppendLine($"    br label %loopcond{loop_body_cond}, !llvm.loop !9");
                     output_program.AppendLine($"loopend{loop_body_cond}:");
                     break;
-                //condition = CompileExpr(program.expressions[0]);
-                //while (condition == 1) {
-                //    CompileExpr(program.expressions[1]);
-                //    condition = CompileExpr(program.expressions[0]);
-                //}
                 case "print":
                     CompileExpr(program.expressions[0]);
                     int printResult = instruction_p - 1;
@@ -300,14 +295,21 @@ namespace MyLisp
                     break;
                 case "proc":
                     output_program.AppendLine(";  ---- PROC ----");
-                    output_program.AppendLine("define i32 @"+program._function_name+"(" + ") {");
-                    foreach(var item in program.expressions) {
+                    output_program.Append("define void @" + program._function_name + "(");//+ ") {");
+                    for(int i = 0; i < program.args_count; i++) {
+                        output_program.Append($"i32 noundef %_{program.expressions[i].variable_name}");
+                    }
+                    output_program.AppendLine(") {");
+                    foreach (var item in program.expressions) {
                         CompileExpr(item);
                     }
-                    output_program.AppendLine("    ret i32 0");
+                    output_program.AppendLine("    ret void");
                     output_program.AppendLine("}");
-
 					break;
+                default:
+                    output_program.AppendLine($";  ---- FUNC CALL {program.function_name} ----");
+                    output_program.AppendLine($"    call void @{program.function_name}() ");
+                    break;
             };
         }
         static public void CompileExpr(Expr program) {
@@ -337,11 +339,11 @@ namespace MyLisp
     class Program
     {
         public static void Main() {
-            //string text = File.ReadAllText("./Examples/Program.txt");
+            string text = File.ReadAllText("./Examples/Program.txt");
             //string text = File.ReadAllText("./Examples/block_test.txt");
             //string text = File.ReadAllText("./Examples/loop_test.txt");
             //string text = File.ReadAllText("./Examples/llvm_test.txt");
-            string text = File.ReadAllText("./Examples/proc_test.txt");
+            //string text = File.ReadAllText("./Examples/proc_test.txt");
             Console.WriteLine(text);
             Parser.tokens = Lexer.Tokenize(text);
             Expr[] program = Parser.ParseTokenArr();
